@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Forest Escape</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #gameCanvas {
+            border: 2px solid #333;
+        }
+
+        .game-ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #ff0000;
+            font-size: 20px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .tutorial {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 16px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-ui">
+        SANITY: <span id="sanityMeter">100</span>%
+    </div>
+    <div class="tutorial">
+        Use Arrow Keys to move | Find the highway to escape | Don't let the ghost catch you
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const sanityMeter = document.getElementById('sanityMeter');
+
+        // Set canvas size
+        canvas.width = 800;
+        canvas.height = 600;
+
+        // Game variables
+        let gameOver = false;
+        let won = false;
+        let sanity = 100;
+        
+        // Player properties
+        const player = {
+            x: 50,
+            y: canvas.height / 2,
+            size: 20,
+            speed: 3,
+            flashlightAngle: 0,
+            flashlightRange: 100
+        };
+
+        // Ghost properties
+        const ghost = {
+            x: canvas.width - 100,
+            y: canvas.height / 2,
+            size: 25,
+            speed: 2,
+            visible: false,
+            lastAppearance: 0,
+            appearanceInterval: 5000
+        };
+
+        // Forest properties
+        const trees = [];
+        const numTrees = 50;
+
+        // Highway (goal) properties
+        const highway = {
+            x: canvas.width - 50,
+            y: canvas.height / 2,
+            width: 30,
+            height: 100
+        };
+
+        // Initialize trees
+        for (let i = 0; i < numTrees; i++) {
+            trees.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 20 + Math.random() * 30
+            });
+        }
+
+        // Key state tracking
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false
+        };
+
+        // Event listeners for keyboard
+        window.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.key)) {
+                keys[e.key] = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.key)) {
+                keys[e.key] = false;
+            }
+        });
+
+        // Draw functions
+        function drawPlayer() {
+            // Flashlight effect
+            const gradient = ctx.createRadialGradient(
+                player.x, player.y, 0,
+                player.x, player.y, player.flashlightRange
+            );
+            gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.flashlightRange, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Player
+            ctx.fillStyle = '#ffd700';
+            ctx.fillRect(player.x - player.size/2, player.y - player.size/2, player.size, player.size);
+        }
+
+        function drawGhost() {
+            if (!ghost.visible) return;
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.beginPath();
+            ctx.arc(ghost.x, ghost.y, ghost.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ghost eyes
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(ghost.x - 5, ghost.y - 5, 3, 0, Math.PI * 2);
+            ctx.arc(ghost.x + 5, ghost.y - 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawTrees() {
+            trees.forEach(tree => {
+                ctx.fillStyle = '#234f1e';
+                ctx.beginPath();
+                ctx.moveTo(tree.x, tree.y - tree.size);
+                ctx.lineTo(tree.x - tree.size/2, tree.y + tree.size/2);
+                ctx.lineTo(tree.x + tree.size/2, tree.y + tree.size/2);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#4a2810';
+                ctx.fillRect(tree.x - 5, tree.y + tree.size/2, 10, 20);
+            });
+        }
+
+        function drawHighway() {
+            ctx.fillStyle = '#444';
+            ctx.fillRect(highway.x, highway.y - highway.height/2, highway.width, highway.height);
+            
+            // Road markings
+            ctx.fillStyle = '#fff';
+            for (let i = 0; i < highway.height; i += 20) {
+                ctx.fillRect(highway.x + highway.width/2 - 2, highway.y - highway.height/2 + i, 4, 10);
+            }
+        }
+
+        // Update functions
+        function updatePlayer() {
+            if (keys.ArrowUp && player.y > player.size) player.y -= player.speed;
+            if (keys.ArrowDown && player.y < canvas.height - player.size) player.y += player.speed;
+            if (keys.ArrowLeft && player.x > player.size) player.x -= player.speed;
+            if (keys.ArrowRight && player.x < canvas.width - player.size) player.x += player.speed;
+        }
+
+        function updateGhost() {
+            const now = Date.now();
+            if (!ghost.visible && now - ghost.lastAppearance > ghost.appearanceInterval) {
+                ghost.visible = true;
+                ghost.x = Math.random() * canvas.width;
+                ghost.y = Math.random() * canvas.height;
+                ghost.lastAppearance = now;
+                decreaseSanity(10);
+            }
+
+            if (ghost.visible) {
+                // Move ghost towards player
+                const dx = player.x - ghost.x;
+                const dy = player.y - ghost.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                ghost.x += (dx / distance) * ghost.speed;
+                ghost.y += (dy / distance) * ghost.speed;
+
+                // Check for collision
+                if (distance < player.size + ghost.size) {
+                    gameOver = true;
+                }
+
+                // Ghost disappears after a while
+                if (now - ghost.lastAppearance > 3000) {
+                    ghost.visible = false;
+                }
+            }
+        }
+
+        function decreaseSanity(amount) {
+            sanity = Math.max(0, sanity - amount);
+            sanityMeter.textContent = sanity;
+            if (sanity <= 0) {
+                gameOver = true;
+            }
+        }
+
+        function checkWin() {
+            const dx = player.x - highway.x;
+            const dy = player.y - highway.y;
+            if (Math.abs(dx) < highway.width && Math.abs(dy) < highway.height/2) {
+                won = true;
+            }
+        }
+
+        // Main game loop
+        function gameLoop() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawHighway();
+            drawTrees();
+            drawPlayer();
+            drawGhost();
+
+            if (!gameOver && !won) {
+                updatePlayer();
+                updateGhost();
+                checkWin();
+                decreaseSanity(0.02);
+            } else {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '48px Arial';
+                if (won) {
+                    ctx.fillText('You Escaped!', canvas.width/2 - 120, canvas.height/2);
+                } else {
+                    ctx.fillText('Game Over', canvas.width/2 - 100, canvas.height/2);
+                }
+                ctx.font = '24px Arial';
+                ctx.fillText('Click to restart', canvas.width/2 - 60, canvas.height/2 + 40);
+                return;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Click to restart
+        canvas.addEventListener('click', () => {
+            if (gameOver || won) {
+                gameOver = false;
+                won = false;
+                sanity = 100;
+                sanityMeter.textContent = sanity;
+                player.x = 50;
+                player.y = canvas.height / 2;
+                ghost.visible = false;
+                ghost.lastAppearance = 0;
+                gameLoop();
+            }
+        });
+
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>

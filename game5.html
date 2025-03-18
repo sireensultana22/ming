@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Food Memory Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #e6f3ff;
+            font-family: Arial, sans-serif;
+            color: #456789;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 600px;
+            margin: 20px;
+            z-index: 1;
+        }
+
+        .card {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-front {
+            background-color: #b3d9ff;
+        }
+
+        .card-back {
+            background-color: white;
+            transform: rotateY(180deg);
+        }
+
+        .stats {
+            margin: 20px;
+            font-size: 1.2em;
+            background-color: #d4e6ff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            background-color: #99ccff;
+            border: none;
+            border-radius: 5px;
+            color: #456789;
+            cursor: pointer;
+            margin: 10px;
+            transition: background-color 0.3s;
+            z-index: 1;
+        }
+
+        button:hover {
+            background-color: #7fbfff;
+        }
+
+        .timer {
+            font-size: 1.5em;
+            margin: 10px;
+            color: #456789;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="confetti-canvas"></canvas>
+    <h1>Food Memory Game</h1>
+    <div class="timer" id="timer">Time: 0:00</div>
+    <div class="stats">
+        Moves: <span id="moves">0</span>
+        Pairs Found: <span id="pairs">0</span>
+    </div>
+    <div class="game-container" id="gameContainer"></div>
+    <button onclick="resetGame()">New Game</button>
+
+    <audio id="flipSound" src="data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAADAAAGhgBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVWqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr///////////////////////////////////////////8AAAA8TEFNRTMuMTAwBLkAAAAAAAAAABUgJAMGQQABmgAABoYXtdS3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uwxAAABLQDe7QQAAI2FnP/WhAAVqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqg==" preload="auto"></audio>
+    <audio id="matchSound" src="data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uQxAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAADAAAGhgBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVWqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr///////////////////////////////////////////8AAAA8TEFNRTMuMTAwBLkAAAAAAAAAABUgJAMGQQABmgAABoYXtdS3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//vAxAAABOgPf7UEACJxh7D/HhAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqg==" preload="auto"></audio>
+
+    <script>
+        // Confetti class and animation code
+        class Confetti {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.active = false;
+
+                this.colors = [
+                    '#ff577f', '#ff884b', '#ffd384', '#fff9b0',
+                    '#7db9b6', '#96c291', '#f1c27b', '#e0cdbe'
+                ];
+
+                this.resetCanvas();
+                window.addEventListener('resize', () => this.resetCanvas());
+            }
+
+            resetCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            createParticles() {
+                for (let i = 0; i < 150; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * -this.canvas.height,
+                        rot: Math.random() * 360,
+                        color: this.colors[Math.floor(Math.random() * this.colors.length)],
+                        size: Math.random() * 10 + 5,
+                        speed: Math.random() * 3 + 2,
+                        spin: Math.random() * 8 - 4
+                    });
+                }
+            }
+
+            animate() {
+                if (!this.active) return;
+
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.particles.forEach((p, index) => {
+                    p.y += p.speed;
+                    p.rot += p.spin;
+
+                    this.ctx.save();
+                    this.ctx.translate(p.x, p.y);
+                    this.ctx.rotate((p.rot * Math.PI) / 180);
+                    
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                    
+                    this.ctx.restore();
+
+                    if (p.y > this.canvas.height) {
+                        this.particles[index].y = -20;
+                    }
+                });
+
+                requestAnimationFrame(() => this.animate());
+            }
+
+            start() {
+                this.active = true;
+                this.particles = [];
+                this.createParticles();
+                this.animate();
+            }
+
+            stop() {
+                this.active = false;
+                this.particles = [];
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
+
+        // Game code
+        const foodEmojis = ['🍕', '🍔', '🌮', '🍣', '🍜', '🍎', '🍇', '🍦'];
+        let cards = [...foodEmojis, ...foodEmojis];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let canFlip = true;
+        let timerInterval;
+        let seconds = 0;
+
+        const flipSound = document.getElementById('flipSound');
+        const matchSound = document.getElementById('matchSound');
+        const confetti = new Confetti(document.getElementById('confetti-canvas'));
+
+        function updateTimer() {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            document.getElementById('timer').textContent = 
+                `Time: ${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            seconds++;
+        }
+
+        function shuffleCards() {
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+        }
+
+        function createCard(emoji, index) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-front">❓</div>
+                <div class="card-back">${emoji}</div>
+            `;
+            card.dataset.index = index;
+            card.addEventListener('click', () => flipCard(card));
+            return card;
+        }
+
+        function flipCard(card) {
+            if (!canFlip || card.classList.contains('flipped') || flippedCards.length >= 2) return;
+
+            flipSound.currentTime = 0;
+            flipSound.play();
+            
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                document.getElementById('moves').textContent = moves;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            const match = cards[card1.dataset.index] === cards[card2.dataset.index];
+
+            canFlip = false;
+            setTimeout(() => {
+                if (!match) {
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                } else {
+                    matchSound.currentTime = 0;
+                    matchSound.play();
+                    matchedPairs++;
+                    document.getElementById('pairs').textContent = matchedPairs;
+                    if (matchedPairs === foodEmojis.length) {
+                        clearInterval(timerInterval);
+                        confetti.start();
+                        setTimeout(() => {
+                            alert(`Congratulations! You won in ${moves} moves and ${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}!`);
+                        }, 500);
+                    }
+                }
+                flippedCards = [];
+                canFlip = true;
+            }, 1000);
+        }
+
+        function resetGame() {
+            confetti.stop();
+            const gameContainer = document.getElementById('gameContainer');
+            gameContainer.innerHTML = '';
+            matchedPairs = 0;
+            moves = 0;
+            flippedCards = [];
+            seconds = 0;
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            document.getElementById('moves').textContent = '0';
+            document.getElementById('pairs').textContent = '0';
+            document.getElementById('timer').textContent = 'Time: 0:00';
+            
+            shuffleCards();
+            cards.forEach((emoji, index) => {
+                gameContainer.appendChild(createCard(emoji, index));
+            });
+        }
+
+        // Initialize the game
+        resetGame();
+    </script>
+</body>
+</html>

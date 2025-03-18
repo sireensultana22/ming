@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Flying Bird Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #87CEEB;
+        }
+
+        #gameCanvas {
+            border: 2px solid #333;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+        }
+
+        .score {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="score">Score: <span id="scoreElement">0</span></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('scoreElement');
+
+        // Set canvas size
+        canvas.width = 800;
+        canvas.height = 600;
+
+        // Game variables
+        let score = 0;
+        let gameOver = false;
+        let animationId;
+
+        // Bird properties
+        const bird = {
+            x: canvas.width / 4,
+            y: canvas.height / 2,
+            radius: 20,
+            color: '#FFD700'
+        };
+
+        // Pillar properties
+        const pillars = [];
+        const pillarWidth = 60;
+        const pillarGap = 200;
+        const pillarSpeed = 2;
+        let pillarSpawnTimer = 0;
+
+        // Cloud properties
+        const clouds = [];
+        const cloudSpeed = 0.5;
+
+        // Create cloud object
+        class Cloud {
+            constructor() {
+                this.x = canvas.width;
+                this.y = Math.random() * (canvas.height / 2);
+                this.width = 60 + Math.random() * 40;
+                this.height = 30 + Math.random() * 20;
+            }
+
+            draw() {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.width/2, 0, Math.PI * 2);
+                ctx.arc(this.x + this.width/3, this.y - this.height/3, this.width/3, 0, Math.PI * 2);
+                ctx.arc(this.x + this.width/2, this.y, this.width/3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.x -= cloudSpeed;
+            }
+        }
+
+        // Create pillar object
+        class Pillar {
+            constructor() {
+                this.x = canvas.width;
+                this.gapStart = Math.random() * (canvas.height - pillarGap - 100) + 50;
+                this.passed = false;
+            }
+
+            draw() {
+                ctx.fillStyle = '#2E8B57';
+                // Top pillar
+                ctx.fillRect(this.x, 0, pillarWidth, this.gapStart);
+                // Bottom pillar
+                ctx.fillRect(this.x, this.gapStart + pillarGap, pillarWidth, canvas.height);
+            }
+
+            update() {
+                this.x -= pillarSpeed;
+                
+                // Check if bird passed the pillar
+                if (!this.passed && bird.x > this.x + pillarWidth) {
+                    score++;
+                    scoreElement.textContent = score;
+                    this.passed = true;
+                }
+            }
+        }
+
+        // Draw bird
+        function drawBird() {
+            ctx.fillStyle = bird.color;
+            ctx.beginPath();
+            ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw wing
+            ctx.fillStyle = '#FFA500';
+            ctx.beginPath();
+            ctx.ellipse(bird.x - 5, bird.y, 15, 10, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw eye
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(bird.x + 8, bird.y - 5, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Check collisions
+        function checkCollision(pillar) {
+            if (bird.y - bird.radius < 0 || bird.y + bird.radius > canvas.height) {
+                return true;
+            }
+
+            if (bird.x + bird.radius > pillar.x && 
+                bird.x - bird.radius < pillar.x + pillarWidth) {
+                if (bird.y - bird.radius < pillar.gapStart || 
+                    bird.y + bird.radius > pillar.gapStart + pillarGap) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Game loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update and draw clouds
+            if (Math.random() < 0.01) {
+                clouds.push(new Cloud());
+            }
+            
+            clouds.forEach((cloud, index) => {
+                cloud.update();
+                cloud.draw();
+                if (cloud.x + cloud.width < 0) {
+                    clouds.splice(index, 1);
+                }
+            });
+
+            // Update and draw pillars
+            pillarSpawnTimer++;
+            if (pillarSpawnTimer > 150) {
+                pillars.push(new Pillar());
+                pillarSpawnTimer = 0;
+            }
+
+            pillars.forEach((pillar, index) => {
+                pillar.update();
+                pillar.draw();
+
+                // Remove offscreen pillars
+                if (pillar.x + pillarWidth < 0) {
+                    pillars.splice(index, 1);
+                }
+
+                // Check collision
+                if (checkCollision(pillar)) {
+                    gameOver = true;
+                }
+            });
+
+            // Draw bird
+            drawBird();
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = '48px Arial';
+                ctx.fillText('Game Over!', canvas.width/2 - 100, canvas.height/2);
+                ctx.font = '24px Arial';
+                ctx.fillText('Click to restart', canvas.width/2 - 60, canvas.height/2 + 40);
+                cancelAnimationFrame(animationId);
+                return;
+            }
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // Mouse move handler
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            bird.y = e.clientY - rect.top;
+        });
+
+        // Click to restart
+        canvas.addEventListener('click', () => {
+            if (gameOver) {
+                gameOver = false;
+                score = 0;
+                scoreElement.textContent = score;
+                bird.y = canvas.height / 2;
+                pillars.length = 0;
+                clouds.length = 0;
+                pillarSpawnTimer = 0;
+                gameLoop();
+            }
+        });
+
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>

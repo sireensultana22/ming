@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Mini Games Hub</title>
+    <style>
+        :root {
+            /* Dark theme variables (default) */
+            --bg-color: #0a0a0a;
+            --card-bg: #111;
+            --text-color: #00ffff;
+            --shadow-color: #00ffff;
+            --border-color: #00ffff;
+            --hover-bg: #00ffff;
+            --hover-text: #000;
+            --footer-bg: #000;
+        }
+        
+        html[data-theme='light'] {
+            /* Light theme variables */
+            --bg-color: #f0f8ff;
+            --card-bg: #ffffff;
+            --text-color: #0077cc;
+            --shadow-color: rgba(0, 119, 204, 0.5);
+            --border-color: #0077cc;
+            --hover-bg: #0077cc;
+            --hover-text: #ffffff;
+            --footer-bg: #e6f3ff;
+        }
+        
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            padding: 0; 
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .content { 
+            flex-grow: 1; 
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 { 
+            color: var(--text-color); 
+            text-shadow: 0 0 10px var(--shadow-color); 
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+        
+        .game-list { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            margin-top: 20px; 
+        }
+        
+        .game-card { 
+            background-color: var(--card-bg); 
+            border: 2px solid var(--border-color); 
+            border-radius: 10px; 
+            padding: 15px; 
+            box-shadow: 0 0 15px var(--shadow-color); 
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        
+        .game-thumbnail { 
+            width: 100%; 
+            height: 150px; 
+            background-size: cover; 
+            background-position: center; 
+            border-bottom: 2px solid var(--border-color); 
+            margin-bottom: 10px; 
+            transition: border-color 0.3s ease;
+        }
+        
+        a { 
+            text-decoration: none; 
+            color: var(--text-color); 
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+        
+        /* Footer navigation styles */
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+            padding: 20px;
+            background-color: var(--footer-bg);
+            box-shadow: 0 0 10px var(--shadow-color);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .footer-nav a { 
+            color: var(--text-color); 
+            text-decoration: none; 
+            padding: 10px 25px; 
+            border: 2px solid var(--border-color); 
+            border-radius: 5px; 
+            transition: all 0.3s ease; 
+        }
+        
+        .footer-nav a:hover { 
+            background-color: var(--hover-bg); 
+            color: var(--hover-text); 
+        }
+        
+        /* Section styles */
+        section {
+            padding: 40px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            display: none;
+        }
+        
+        section.active {
+            display: block;
+        }
+        
+        #home-section {
+            display: block;
+        }
+        
+        /* About section */
+        .game-created {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: left;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        .bio-info {
+            margin-top: 30px;
+            text-align: left;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+            transition: border-color 0.3s ease;
+        }
+        
+        /* Contact section */
+        .contact-links {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .contact-links a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            width: 200px;
+            transition: all 0.3s ease;
+        }
+        
+        .contact-links a:hover {
+            background-color: var(--hover-bg);
+            color: var(--hover-text);
+            transform: translateY(-3px);
+            box-shadow: 0 0 15px var(--shadow-color);
+        }
+        
+        .contact-icon {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-color);
+            transition: fill 0.3s ease;
+        }
+        
+        .contact-links a:hover .contact-icon {
+            fill: var(--hover-text);
+        }
+        /* Theme Toggle */
+        .theme-toggle-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 999;
+        }
+        
+        .theme-toggle {
+            display: inline-block;
+            position: relative;
+            width: 60px;
+            height: 30px;
+        }
+        
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--card-bg);
+            transition: .4s;
+            border-radius: 34px;
+            border: 2px solid var(--border-color);
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 2px;
+            background-color: var(--text-color);
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--card-bg);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(28px);
+        }
+        
+        .theme-icon {
+            position: absolute;
+            top: 5px;
+            transition: opacity 0.3s ease;
+        }
+        
+        .sun-icon {
+            left: 7px;
+            opacity: 0;
+            color: #ff9900;
+        }
+        
+        .moon-icon {
+            right: 7px;
+            opacity: 1;
+            color: var(--text-color);
+        }
+        
+        input:checked + .slider .sun-icon {
+            opacity: 1;
+        }
+        
+        input:checked + .slider .moon-icon {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <div class="theme-toggle-container">
+        <label class="theme-toggle">
+            <input type="checkbox" id="theme-toggle">
+            <span class="slider">
+                <span class="theme-icon sun-icon">☀️</span>
+                <span class="theme-icon moon-icon">🌙</span>
+            </span>
+        </label>
+    </div>
+    
+    <!-- Home Section (Games List) -->
+    <section id="home-section">
+        <div class="content">
+            <h1>Welcome to My Mini Games Hub!</h1>
+            <p>Click on a game below to start playing:</p>
+            <div class="game-list">
+                <div class="game-card">
+                    <div class="game-thumbnail" style="background-image: url('./games/game1/sudoku.jpg');"></div>
+                    <h3>Sudoku Lite 4x4</h3>
+                    <a href="./games/game1/index.html">Play Now</a>
+                </div>
+                <div class="game-card">
+                    <div class="game-thumbnail" style="background-image: url('./games/game2/forest\ escape.jpg');"></div>
+                    <h3>Forest Escape</h3>
+                    <a href="./games/game2/index.html">Play Now</a>
+                </div>
+                <div class="game-card">
+                    <div class="game-thumbnail" style="background-image: url('./games/game3/fly\ bird.jpg');"></div>
+                    <h3>Flying Bird</h3>
+                    <a href="./games/game3/index.html">Play Now</a>
+                </div>
+                <div class="game-card">
+                    <div class="game-thumbnail" style="background-image: url('./games/game4/j&d.jpg');"></div>
+                    <h3>Jump and Doge</h3>
+                    <a href="./games/game4/index.html">Play Now</a>
+                </div>
+                <div class="game-card">
+                    <div class="game-thumbnail" style="background-image: url('./games/game5/fm.jpg');"></div>
+                    <h3>Food Memory</h3>
+                    <a href="./games/game5/index.html">Play Now</a>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- About Section -->
+    <section id="about-section">
+        <h1>About Me & My Games</h1>
+        <p>Welcome to my personal game development portfolio. Here are the games I've created:</p>
+        
+        <div class="game-created">
+            <h3>Game 1 - Sudoku Lite 4x4</h3>
+            <p>Traditional sudoku game in 4x4. Quick and easy brainstrom game.</p>
+        </div>
+        
+        <div class="game-created">
+            <h3>Game 2 - Forest Escape</h3>
+            <p>Lost in the forest,quickly find the way back before it catches you.</p>
+        </div>
+        
+        <div class="game-created">
+            <h3>Game 3 - Flying Bird</h3>
+            <p>Pass the bird along the pipeline,avoid hiting them to create a high score.</p>
+        </div>
+        
+        <div class="game-created">
+            <h3>Game 4 - Jump and Dodge</h3>
+            <p>Jump and avoid the obstacles to create the highscore.</p>
+        </div>
+        
+        <div class="game-created">
+            <h3>Game 5 - Food Memory</h3>
+            <p>An old fashioned memory game,flip and find matching delicious foods.</p>
+        </div>
+        
+        <div class="bio-info">
+            <h3>About the Developer</h3>
+            <p>Hello,I'm Nadira Fatima Sireen Sultana. Currently pursuing my degree in computer science specialising in IOT,Cybersecurity.</p>
+            <p>I have a great interest in web development and programming in several other languages.</p>
+        </div>
+    </section>
+    
+    <!-- Contact Section -->
+    <section id="contact-section">
+        <h1>Contact Me</h1>
+        <p>Interested in collaborating or have questions about my games? Reach out through any of these channels:</p>
+        
+        <div class="contact-links">
+            <a href="mailto:sireensultana22@gmail.com">
+                <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M0 3v18h24v-18h-24zm21.518 2l-9.518 7.713-9.518-7.713h19.036zm-19.518 14v-11.817l10 8.104 10-8.104v11.817h-20z"/>
+                </svg>
+            sireensultana22
+            @gmail.com
+            </a>
+            
+            <a href="https://www.linkedin.com/in/sireen-sultana-4a3014301?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app" target="_blank">
+                <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M4.98 3.5c0 1.381-1.11 2.5-2.48 2.5s-2.48-1.119-2.48-2.5c0-1.38 1.11-2.5 2.48-2.5s2.48 1.12 2.48 2.5zm.02 4.5h-5v16h5v-16zm7.982 0h-4.968v16h4.969v-8.399c0-4.67 6.029-5.052 6.029 0v8.399h4.988v-10.131c0-7.88-8.922-7.593-11.018-3.714v-2.155z"/>
+                </svg>
+                LinkedIn Profile
+            </a>
+            
+            <a href="https://github.com/sireensultana22" target="_blank">
+                <svg class="contact-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                GitHub Profile
+            </a>
+        </div>
+    </section>
+    
+    <!-- Footer Navigation -->
+    <div class="footer-nav">
+        <a href="#home" class="nav-link active" data-section="home-section">Games</a>
+        <a href="#about" class="nav-link" data-section="about-section">About</a>
+        <a href="#contact" class="nav-link" data-section="contact-section">Contact</a>
+    </div>
+    
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        
+        themeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        });
+        
+        // Navigation functionality
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('section');
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all links and sections
+                navLinks.forEach(l => l.classList.remove('active'));
+                sections.forEach(s => s.classList.remove('active'));
+                
+                // Add active class to clicked link
+                this.classList.add('active');
+                
+                // Show corresponding section
+                const sectionId = this.getAttribute('data-section');
+                document.getElementById(sectionId).classList.add('active');
+                
+                // Scroll to top
+                window.scrollTo(0, 0);
+            });
+        });
+    </script>
+</body>
+</html>
